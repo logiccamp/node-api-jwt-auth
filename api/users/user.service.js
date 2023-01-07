@@ -24,6 +24,13 @@ module.exports = {
             return callback(err, result[0])
         })
     },
+    getUserByEmail : (id, callback) => {
+        pool.query(`select * from users where email = ?`, [
+            id
+        ], (err, result) =>{
+            return callback(err, result[0])
+        })
+    },
     update : (data, callback) => {
         pool.query(`update users set first_name = ?, last_name = ?, email = ?, phone = ?, password = ? where id = ?`, [
             data.first_name,

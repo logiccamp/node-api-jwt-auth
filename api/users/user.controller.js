@@ -1,11 +1,14 @@
-const { genSaltSync, hashSync } = require("bcrypt");
-const { create, getUserByID, getUsers, update, deleteUser} = require("./user.service");
+const { genSaltSync, hashSync, compareSync } = require("bcrypt");
+const { create, getUserByID, getUsers, update, deleteUser, getUserByEmail} = require("./user.service");
+const {sign } = require("jsonwebtoken");
 
 module.exports = {
     createUser : (req, res) =>{
         const body = req.body;
         const salt = genSaltSync(10);
+        console.log(body.password)
         body.password = hashSync(body.password, salt)
+        console.log(body.password)
         create(body, (err, result)=>{
             if(err){
                 return res.status(500).json({
@@ -62,7 +65,12 @@ module.exports = {
                     message : "Database Connection Error"
                 })
             }
-
+            if(!result){
+                return res.status(500).json({
+                    status : false,
+                    message : "failed to update user"
+                })
+            }
             return res.status(200).json({
                 status : true,
                 data : "user updated successfully",
@@ -85,4 +93,36 @@ module.exports = {
             })
         })
     },
+    login : (req, res) => {
+        const body = req.body;
+        getUserByEmail(body.email, (err, result)=>{
+            if(err){
+                return res.json({
+                    status : false,
+                    message : "database connection error"
+                })
+            }
+            if(!result){
+                return res.json({
+                    status : false,
+                    message : "Invalid login credentials"
+                })
+            }
+
+            const checkPassword = compareSync(body.password, result.password);
+            if(checkPassword){
+                result.password = undefined;
+                // sign the user
+                const jsonwebtoken = sign({result : result}, process.env.JWT_KEY, {
+                    expiresIn : "1hr"
+                });
+                return res.json({status : true, message : "login successfully", token : jsonwebtoken})
+            }
+
+            return res.json({
+                status : false,
+                message : "Invalid login credentials"
+            })
+        })
+    }
 }
